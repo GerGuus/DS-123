@@ -1,0 +1,61 @@
+---
+title: "Лабораторна робота №4. Доставка результатів Data Science-проєкту та його розгортання"
+author: '[Іващенко А.В.]'
+date: "`r Sys.Date()`"
+output:
+  word_document:
+    highlight: tango
+    toc: true
+  html_notebook:
+    toc: true
+    toc_float: true
+    highlight: tango
+  pdf_document:
+    highlight: tango
+    toc: true
+  html_document:
+    toc: true
+    df_print: paged
+fontsize: 12pt
+header-includes: \usepackage[T2A]{fontenc} \usepackage[utf8]{inputenc} \usepackage[russian]{babel}
+editor_options:
+  chunk_output_type: console
+---
+
+```{r}
+library(engsoccerdata)
+library(dplyr)
+library(ggplot2)
+data(england)
+```
+Выбранная команда и сезоны
+```{r}
+team <- "Arsenal"
+seasonRange <- c(2000, 2020)
+
+filteredData <- england %>%
+  filter((home == team | visitor == team) &
+         Season >= seasonRange[1] & Season <= seasonRange[2])
+```
+Таблица матчей
+```{r}
+filteredData %>%
+  select(Date, Season, home, visitor, FT, hgoal, vgoal, result) %>%
+  arrange(desc(Season), Date)
+```
+Средние голы по сезонам
+```{r}
+avgGoals <- filteredData %>%
+  group_by(Season) %>%
+  summarise(
+    AvgHomeGoals = mean(hgoal),
+    AvgAwayGoals = mean(vgoal)
+  )
+
+ggplot(avgGoals, aes(x = Season)) +
+  geom_bar(aes(y = AvgHomeGoals), stat = "identity", fill = "blue", alpha = 0.7) +
+  geom_bar(aes(y = AvgAwayGoals), stat = "identity", fill = "red", alpha = 0.7) +
+  labs(title = paste("Средние голы по сезонам для", team),
+       x = "Сезон", y = "Среднее количество голов") +
+  theme_minimal()
+```
