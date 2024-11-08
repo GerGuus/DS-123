@@ -1,0 +1,70 @@
+---
+title: "Модуль 1. Базовий. Лабораторна робота №1. Створення основи типового Data Science-проекту"
+author: '[Іващенко А.В.]'
+date: "`r Sys.Date()`"
+output:
+  word_document:
+    highlight: tango
+    toc: true
+  html_notebook:
+    toc: true
+    toc_float: true
+    highlight: tango
+  pdf_document:
+    highlight: tango
+    toc: true
+  html_document:
+    toc: true
+    df_print: paged
+fontsize: 12pt
+header-includes: \usepackage[T2A]{fontenc} \usepackage[utf8]{inputenc} \usepackage[russian]{babel}
+editor_options:
+  chunk_output_type: console
+---
+
+## 1.1 Постановка задачі
+
+$$
+y(x) = b_0 x + b_1 + b_2 x^2 \quad \text{для діапазону} \quad x \in [x_1; x_2]
+$$
+
+## 1.2 Домашнє завдання
+
+1.  Ознайомитися з можливостями пакету ggplot2 (Hadley Wickham 2009).
+
+2.  Оптимізувати код, наведений у даній методичці, за допомогою потокового оператора %\>% засобами пакету ggplot2.
+
+3.  Побудувати графік функції засобами пакету ggplot2. (Hadley Wickham et al. 2021)
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+b0 <- 2
+b1 <- 3
+b2 <- 1.57
+
+data <- tibble(
+  x = seq(-1, 1, .1)
+) %>%
+  mutate(
+    y = b0 + b1 * x + b2 * x^2
+  )
+
+ggplot(data, aes(x = x, y = y)) +
+  geom_line(color = "red") +
+  geom_point(color = "blue") +
+  labs(title = "Графік функції", x = "x", y = "y")
+
+```
+
+```{r}
+df <- data.frame(x = data$x, y = data$y)
+
+library(rio) 
+export(df, "data/data.csv")
+
+dfNew <- import("data/data.csv")
+
+knitr::kable(head(dfNew), caption = "_Табл. 1. Фрагмент таблиці даних_")
+```

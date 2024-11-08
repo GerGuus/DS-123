@@ -1,0 +1,76 @@
+---
+title: "Лабораторна робота №3. Розвідувальний аналіз даних. Візуалізація"
+author: '[Іващенко А.В.]'
+date: "`r Sys.Date()`"
+output:
+  word_document:
+    highlight: tango
+    toc: true
+  html_document:
+    toc: true
+    df_print: paged
+  pdf_document:
+    highlight: tango
+    toc: true
+  html_notebook:
+    toc: true
+    toc_float: true
+    highlight: tango
+fontsize: 12pt
+header-includes: \usepackage[T2A]{fontenc} \usepackage[utf8]{inputenc} \usepackage[russian]{babel}
+editor_options:
+  chunk_output_type: console
+---
+
+### Чи є дані комплектними?
+
+```{r}
+library(ggplot2)
+library(engsoccerdata)
+
+data("england")
+
+str(england)
+
+summary(england)
+
+sum(is.na(england))
+```
+
+Результати: Якщо після виконання коду сума пропущених значень (sum(is.na(england))) дорівнює 0, дані комплектні. Якщо є пропущені значення, необхідно їх очистити або заповнити.
+
+### Чи пов’язані між собою характеристики?
+
+```{r}
+correlation <- cor(england$hgoal, england$vgoal, use = "complete.obs")
+print(correlation)
+```
+
+Результати: Кореляція між кількістю голів господарів та гостей показує звязок між цими змінними. Якщо значення кореляції близьке до 0 (як у прикладі), це означає, що змінні слабо повязані або не повязані.
+
+### Чи існує проста структура, яка дозволяє описати дані об’єкти в просторі розмірністю менш ніж 4?
+
+```{r}
+england$log_hgoal <- log(england$hgoal + 1)  
+england$log_vgoal <- log(england$vgoal + 1)    
+
+england$result_binary <- ifelse(england$result == "H", 1, 0)
+
+model <- glm(result_binary ~ log_hgoal + log_vgoal, data = england, family = "binomial")
+
+summary(model)
+```
+
+Результати: Логістична регресія показує зв'язок між голами господарів і гостей та ймовірністю перемоги господарів. Значення коефіцієнтів у моделі свідчать про те, що на основі цих змінних можна прогнозувати результат матчу. Якщо коефіцієнти значущі (p-value менше 0.05), то можна говорити про існування простої структури.
+
+### Чи є всі три види результатів (перемога господарів, гостей, нічия) однорідними у даному просторі ознак?
+
+```{r}
+table(england$result)
+
+ggplot(england, aes(x = result)) + 
+  geom_bar(fill = "skyblue", color = "black") + 
+  labs(title = "Розподіл результатів матчів", x = "Результат", y = "Кількість")
+```
+
+Результати: Графік покаже, як часто трапляються перемоги господарів, гостей або нічия. Якщо один із результатів трапляється значно частіше, це може свідчити про неоднорідність у просторі ознак.

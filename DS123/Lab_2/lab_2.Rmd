@@ -1,0 +1,130 @@
+---
+title: "Лабораторна робота №2. Маніпулювання даними"
+author: '[Іващенко А.В.]'
+date: "`r Sys.Date()`"
+output:
+  word_document:
+    highlight: tango
+    toc: true
+  html_notebook:
+    toc: true
+    toc_float: true
+    highlight: tango
+  pdf_document:
+    highlight: tango
+    toc: true
+  html_document:
+    toc: true
+    df_print: paged
+fontsize: 12pt
+header-includes: \usepackage[T2A]{fontenc} \usepackage[utf8]{inputenc} \usepackage[russian]{babel}
+editor_options:
+  chunk_output_type: console
+---
+
+## Шаг 1: Создание и подключение к базе данных SQLite
+
+Сначала создадим базу данных SQLite, затем загрузим в неё данные о матчах из пакета engsoccerdata.
+
+```{r}
+library(DBI)
+library(dplyr)
+library(RSQLite)
+library(engsoccerdata)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), path = "data/my_db.sqlite3")
+
+data("england", package = "engsoccerdata")
+```
+
+## Шаг 2: Экспорт данных в БД и создание индексов
+
+Теперь мы экспортируем данные из engsoccerdata в таблицу в базе данных SQLite и создаем индексы для ускорения работы с запросами.
+
+```{r}
+matches_sqlite <- copy_to(con, england, "matches", temporary = FALSE,
+  indexes = list(
+    c("Season", "Date"),
+    "home",
+    "visitor"
+  )
+)
+```
+
+## Шаг 3: Анализ данных с использованием dplyr
+
+Теперь, когда данные в базе, мы можем использовать dplyr для выполнения различных запросов, аналогичных тем, что были указаны в вашем примере.
+
+### 1. Выбор полей для анализа
+
+```{r}
+matches_sqlite %>% 
+  select(Season, Date, home, visitor, hgoal, vgoal)
+```
+
+### 2. Фильтрация матчей с разницей в счете больше 3
+
+```{r}
+matches_sqlite %>% 
+  filter(abs(hgoal - vgoal) > 3)
+```
+
+### 3. Среднее количество голов для каждой команды
+
+```{r}
+matches_sqlite %>% 
+  group_by(home) %>% 
+  summarise(avg_home_goals = mean(hgoal, na.rm = TRUE))
+```
+
+### 4. Среднее количество голов для команд с более чем 100 матчами
+
+```{r}
+matches_sqlite %>% 
+  group_by(home) %>% 
+  summarise(
+    matches = n(),
+    avg_home_goals = mean(hgoal, na.rm = TRUE)
+  ) %>% 
+  filter(matches > 100) %>%
+  arrange(desc(avg_home_goals))
+```
+
+### 5. Разделение данных по сезонам и построение графика
+
+```{r}
+library(ggplot2)
+
+season_stats <- matches_sqlite %>%
+  group_by(Season) %>%
+  summarise(
+    total_matches = n(),
+    avg_home_goals = mean(hgoal, na.rm = TRUE),
+    avg_away_goals = mean(vgoal, na.rm = TRUE)
+  )
+
+ggplot(season_stats, aes(x = avg_home_goals, y = avg_away_goals)) +
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Зависимость средних голов домашних и выездных команд по сезонам")
+
+```
+
+### 6. Количество команд и матчей по сезонам
+
+```{r}
+matches_sqlite %>% 
+  group_by(Season) %>% 
+  summarise(
+    teams = n_distinct(home),
+    matches = n()
+  )
+```
+
+## Шаг 4: Закрытие соединения
+
+После завершения работы с базой данных, не забудьте закрыть соединение:
+
+```{r}
+dbDisconnect(con)
+```
